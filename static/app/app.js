@@ -605,46 +605,8 @@
         });
       };
 
-      var checkApproveResult = function(hashString) {
-        web3.eth.getTransactionReceipt(hashString, function(error, result) {
-          if (error) {
-            console.log(error);
-          } else {
-            if (result == null) {
-              if (waiting.isActive == false) {
-                waiting.start('Please wait. We are approving your request!');
-                waiting.isActive = true;
-              }
-              $timeout(function() {
-                checkApproveResult(hashString);
-              }, 5000);
-            } else {
-              if (result.status == '0x1') {
-                waiting.stop();
-                waiting.isActive = false;
-                decreaseTransaction();
-              }
-            }
-          }
-        })
-      };
+      decreaseTransaction();
 
-      var approveDecrease = function() {
-        $scope.etherDollarContract.decreaseApproval.sendTransaction($scope.etherBankAddress, web3.toWei(
-          $scope.decreaseAmount, "ether"), {
-          value: 0,
-          sender: web3.eth.defaultAccount
-        }, function(error, result) {
-          if (result) {
-            var hashString = result;
-            checkApproveResult(hashString);
-          } else {
-            console.log(error);
-          }
-        });
-      };
-
-      approveDecrease();
     };
 
     $scope.getEtdBalance = function() {
