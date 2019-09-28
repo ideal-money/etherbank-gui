@@ -63,57 +63,35 @@
       $('#collapse-icon').toggleClass('fas fa-angle-double-right fas fa-angle-double-left');
     };
 
-    window.addEventListener('load', async () => {
-
-      if (typeof web3 === 'undefined') {
-        Swal.fire({
-          type: 'error',
-          title: 'MetaMask is not installed',
-          text: 'Please install MetaMask from below link',
-          footer: '<a href="https://metamask.io">Install MetaMask</a>'
-        });
-        return;
-      }
-
-      web3.eth.getAccounts(function(err, accounts) {
-        if (err != null) {
-          Swal.fire({
-            type: 'error',
-            title: 'Something wrong',
-            text: 'Check this error: ' + err,
-            footer: ''
-          });
-        }
-      });
-
-
-      if (window.ethereum) {
-        window.web3 = new Web3(ethereum);
-        try {
-          Web3.providers.HttpProvider.prototype.sendAsync = Web3.providers.HttpProvider.prototype.send;
-          await ethereum.enable();
-          $scope.init();
-        } catch (error) {
-          Swal.fire({
-            type: 'error',
-            title: 'Something wrong',
-            text: 'User denied account access...',
-          });
-        }
-      } else if (window.web3) {
-        window.web3 = new Web3(web3.currentProvider);
-      } else {
+    if (window.ethereum) {
+      window.web3 = new Web3(ethereum);
+      Web3.providers.HttpProvider.prototype.sendAsync = Web3.providers.HttpProvider.prototype.send;
+      ethereum.enable().then(function(accounts) {
+        web3.eth.defaultAccount = accounts[0];
+        $scope.init();
+      }).catch(function (reason) {
+        console.log(reason);
         Swal.fire({
           type: 'error',
           title: 'Something wrong',
-          text: 'You should consider trying MetaMask!',
+          text: 'User denied account access...',
         });
-      }
-
-    });
-
-    $scope.init = function() {
+      });
+    } else if (window.web3) {
+      window.web3 = new Web3(web3.currentProvider);
       web3.eth.defaultAccount = web3.eth.accounts[0];
+      $scope.init();
+    } else {
+      Swal.fire({
+        type: 'error',
+        title: 'MetaMask is not installed',
+        text: 'Please install MetaMask from below link',
+        footer: '<a href="https://metamask.io">Install MetaMask</a>'
+      });
+      return;
+    }
+    
+    $scope.init = function() {
       $scope.etherBankAddress = '0x2cb144e31f37e7a31d6fb54881b2958aa263b6df';
       var etherBankInstance = web3.eth.contract(etherBankAbi);
       $scope.etherBankContract = etherBankInstance.at($scope.etherBankAddress);
@@ -128,7 +106,7 @@
         if (error) {
           console.log(error);
         } else {
-          $scope.etherPrice = result.c[0] / 100;
+          $scope.etherPrice = result/100;
           $scope.ethToEtdProportion = $scope.etherPrice / $scope.etdPrice;
           $scope.$applyAsync();
         }
@@ -138,14 +116,13 @@
         if (error) {
           console.log(error);
         } else {
-          $scope.minRatio = result.c[0] / 1000;
+          $scope.minRatio = result/1000;
           $scope.$applyAsync();
         }
       });
-
       web3.eth.getBalance(web3.eth.defaultAccount, function(error, result) {
         if (result) {
-          $scope.ethAccountBalance = result.c[0] / 10 ** 4;
+          $scope.ethAccountBalance = result/10**18;
         } else {
           console.log(error);
         }
@@ -188,7 +165,7 @@
         $scope.currentRatio = $scope.currentRatio.toFixed(2);
       }
 
-      if (!$scope.loanAmount || !$scope.collateralAmount || $scope.currentRatio === Infinity
+      if (!$scope.ethAccountBalance || !$scope.loanAmount || !$scope.collateralAmount || $scope.currentRatio === Infinity
           || $scope.currentRatio === -Infinity) {
             $scope.deactiveGetLoan = true;
       }
@@ -201,9 +178,9 @@
         from: web3.eth.defaultAccount
       }, function(error, result) {
         if (result) {
-          var loanState = result[3].c[0];
-          var currentCollateral = result[1].c[0] / 10 ** 4;
-          var remainingDebt = result[2].c[0] / 10 ** 2;
+          var loanState = result[3].toNumber();
+          var currentCollateral = result[1]/10**18;
+          var remainingDebt = result[2]/10**2;
           var liquidationPrice = $scope.minRatio * remainingDebt / currentCollateral;
           var collateralRatio = currentCollateral * $scope.etherPrice / remainingDebt / $scope.etdPrice;
           var securityMargin = .0001; // It's for rounding the decimals to keep ratio upper than minimum.
@@ -255,7 +232,7 @@
           return;
         } else {
           result.forEach(function(loan) {
-            var loanId = loan.args.loanId.c[0];
+            var loanId = loan.args.loanId.toNumber();
             var thisLoan = {loanId: loanId};
             $scope.loansList.push(thisLoan);
           });
@@ -614,7 +591,7 @@
         if (error) {
           console.log(error);
         } else {
-          $scope.etdAccountbalance = result.c[0] / 10 ** 2;
+          $scope.etdAccountbalance = result/10**2;
         }
       });
     };
